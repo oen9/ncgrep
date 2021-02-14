@@ -5,6 +5,7 @@ import oen.libs.formh
 import oen.libs.{ncurses => nc}
 import oen.libs.{ncursesh => nch}
 import oen.ncgrep.InputWindow.State
+import oen.ncgrep.Main.AppState
 import oen.ncgrep.Main.Colors
 import scala.scalanative.unsafe._
 
@@ -12,8 +13,9 @@ class InputWindow(initState: State, colors: Colors)(implicit z: Zone) {
   val (lines, cols)  = getLinesAndCols()
   val win            = nc.newWin(lines, cols, 1, 0)
   val grepQueryForm  = new InputForm(win, 2, 1, cols - 2, initState.grepQuery, colors)
-  val grepParamsForm = new InputForm(win, 4, 1, cols / 2 - 2, initState.grepQuery, colors)
-  val findParamsForm = new InputForm(win, 4, cols / 2, cols / 2, initState.grepQuery, colors)
+  val grepParamsForm = new InputForm(win, 4, 1, cols / 2 - 2, initState.grepParams, colors)
+  val findParamsForm = new InputForm(win, 4, cols / 2, cols / 2, initState.findParams, colors)
+  val forms          = List(grepQueryForm, grepParamsForm, findParamsForm)
 
   grepQueryForm.initStyle()
   grepParamsForm.initStyle()
@@ -41,15 +43,32 @@ class InputWindow(initState: State, colors: Colors)(implicit z: Zone) {
 
   nc.wRefresh(win)
 
-  def handleKey(key: Int): Unit =
-    grepQueryForm.handleKey(key)
+  def handleKey(key: Int, state: State): State =
+    key match {
+      case ch if ch == '\t' =>
+        val newFormId = (state.formId + 1) match {
+          case 3     => 0
+          case other => other
+        }
+        forms.lift(newFormId).foreach(_.focus())
+        state.copy(formId = newFormId)
 
-  def focus(): Unit =
-    grepQueryForm.focus()
+      case ch =>
+        forms.lift(state.formId).foreach(_.handleKey(ch))
+        getState(state)
+    }
 
-  def getState(): State = {
-    val grepQuery = grepQueryForm.getBuff()
-    State(grepQuery)
+  def focus(state: State): Unit = forms.lift(state.formId).foreach(_.focus())
+
+  private def getState(oldState: State): State = {
+    val grepQuery  = grepQueryForm.getBuff()
+    val grepParams = grepParamsForm.getBuff()
+    val findParams = findParamsForm.getBuff()
+    oldState.copy(
+      grepQuery = grepQuery,
+      grepParams = grepParams,
+      findParams = findParams
+    )
   }
 
   def delete(): Unit = {
@@ -66,5 +85,5 @@ class InputWindow(initState: State, colors: Colors)(implicit z: Zone) {
 }
 
 object InputWindow {
-  case class State(grepQuery: String = "")
+  case class State(grepQuery: String = "", grepParams: String = "-iHne", findParams: String = "", formId: Int = 0)
 }

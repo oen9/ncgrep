@@ -15,7 +15,7 @@ object Main {
 
   case class Colors(title: Short, form: Short)
   case class NcState(inputWin: InputWindow, resultWin: ResultWindow, colors: Colors)
-  case class AppState(inputState: InputWindow.State = InputWindow.State())
+  case class AppState(lastKey: Int = 0, inputState: InputWindow.State = InputWindow.State())
 
   def main(args: Array[String]): Unit = {
     val colors = Colors(title = 1.toShort, form = 2.toShort)
@@ -51,36 +51,36 @@ object Main {
 
   def mainLoops(colors: Colors): Unit = {
     @tailrec
-    def resizeLoop(pressedKey: Int = 0, appState: AppState = AppState()): Unit = pressedKey match {
+    def resizeLoop(appState: AppState = AppState()): Unit = appState.lastKey match {
       case c if c == ns.KEY_F(9) => ()
       case _ =>
-        val (nextKey, nextAppState) = Zone { implicit z =>
+        val nextAppState = Zone { implicit z =>
           redrawMain(ns.stdscr, colors)
           val inputWin  = new InputWindow(appState.inputState, colors)
           val resultWin = new ResultWindow()
-          inputWin.focus()
+          inputWin.focus(appState.inputState)
 
-          val pressedKey     = ns.getch()
-          val ncState        = NcState(inputWin = inputWin, resultWin = resultWin, colors = colors)
-          val nextKey        = mainLoop(pressedKey, appState, ncState)
-          val nextInputState = inputWin.getState()
+          val ncState         = NcState(inputWin = inputWin, resultWin = resultWin, colors = colors)
+          val pressedKey      = ns.getch()
+          val appStateWithKey = appState.copy(lastKey = pressedKey)
+          val nextAppState    = mainLoop(appStateWithKey, ncState)
 
           inputWin.delete()
           resultWin.delete()
 
-          val nextAppState = AppState(inputState = nextInputState)
-          (nextKey, nextAppState)
+          nextAppState
         }
-        resizeLoop(nextKey, nextAppState)
+        resizeLoop(nextAppState)
     }
 
     @tailrec
-    def mainLoop(pressedKey: Int, appState: AppState, ncState: NcState): Int = pressedKey match {
-      case c if c == ns.KEY_F(9) || c == ns.KEY_RESIZE => c
+    def mainLoop(appState: AppState, ncState: NcState): AppState = appState.lastKey match {
+      case c if c == ns.KEY_F(9) || c == ns.KEY_RESIZE => appState.copy(lastKey = c)
       case other =>
-        ncState.inputWin.handleKey(other)
-        val nextKey = ns.getch()
-        mainLoop(nextKey, appState, ncState)
+        val nextInputState = ncState.inputWin.handleKey(other, appState.inputState)
+        val nextKey        = ns.getch()
+        val nextAppState   = appState.copy(lastKey = nextKey, inputState = nextInputState)
+        mainLoop(nextAppState, ncState)
     }
 
     resizeLoop()
