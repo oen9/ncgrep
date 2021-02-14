@@ -1,2 +1,11 @@
 *.class
 *.log
+
+.idea/
+.bloop/
+.metals/
+.bsp/
+target/
+cache/
+sess.vim
+metals.sbt
