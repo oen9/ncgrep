@@ -16,10 +16,13 @@ class ResultWindow {
   def drawResult(results: List[String]): Unit = {
     nc.wErease(win)
     drawBox()
-    for ((line, idx) <- results.zipWithIndex) {
+    for ((line, idx) <- results.zipWithIndex if idx < lines - 2) {
       Zone { implicit z =>
         nc.wMove(win, 1 + idx, 1)
-        val cmsg = toCString(line)
+        val fixedLine =
+          if (line.size > cols - 2) s"${line.trim.substring(0, cols - 6)}..."
+          else line.trim
+        val cmsg = toCString(fixedLine)
         nc.wPrintw(win, cmsg)
       }
     }
