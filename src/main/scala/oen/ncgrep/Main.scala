@@ -12,22 +12,17 @@ import scala.scalanative.unsafe._
 import scalanative.unsigned._
 
 object Main {
+
   case class Colors(title: Short)
+  case class NcState(inputWin: InputWindow, resultWin: ResultWindow, colors: Colors)
+  case class AppState(inputState: InputWindow.State = InputWindow.State())
+
   def main(args: Array[String]): Unit = {
     val colors = Colors(title = 1.toShort)
     val win    = init(colors)
 
-    redrawMain(ns.stdscr, colors)
-    Zone { implicit z =>
-      val inputWin  = new InputWindow()
-      val resultWin = new ResultWindow()
-      inputWin.focus()
+    mainLoops(colors)
 
-      mainLoop(inputWin, resultWin, colors)
-
-      inputWin.delete()
-      resultWin.delete()
-    }
     ns.endWin()
   }
 
@@ -53,26 +48,41 @@ object Main {
     ns.wRefresh(win)
   }
 
-  def mainLoop(inputWindow: InputWindow, resultWin: ResultWindow, colors: Colors): Unit = {
+  def mainLoops(colors: Colors): Unit = {
     @tailrec
-    def loop(pressedKey: Int): Unit = pressedKey match {
+    def resizeLoop(pressedKey: Int = 0, appState: AppState = AppState()): Unit = pressedKey match {
       case c if c == ns.KEY_F(9) => ()
       case _ =>
-        pressedKey match {
-          case c if c == ns.KEY_RESIZE =>
-            redrawMain(ns.stdscr, colors)
-            inputWindow.resize()
-            resultWin.resize()
-            inputWindow.focus()
-          case '\t'  =>
-          case other => inputWindow.handleKey(other)
+        val (nextKey, nextAppState) = Zone { implicit z =>
+          redrawMain(ns.stdscr, colors)
+          val inputWin  = new InputWindow(appState.inputState)
+          val resultWin = new ResultWindow()
+          inputWin.focus()
+
+          val pressedKey     = ns.getch()
+          val ncState        = NcState(inputWin = inputWin, resultWin = resultWin, colors = colors)
+          val nextKey        = mainLoop(pressedKey, appState, ncState)
+          val nextInputState = inputWin.getState()
+
+          inputWin.delete()
+          resultWin.delete()
+
+          val nextAppState = AppState(inputState = nextInputState)
+          (nextKey, nextAppState)
         }
-        val nextKey = ns.getch()
-        loop(nextKey)
+        resizeLoop(nextKey, nextAppState)
     }
 
-    val firstHit = ns.getch()
-    loop(firstHit)
+    @tailrec
+    def mainLoop(pressedKey: Int, appState: AppState, ncState: NcState): Int = pressedKey match {
+      case c if c == ns.KEY_F(9) || c == ns.KEY_RESIZE => c
+      case other =>
+        ncState.inputWin.handleKey(other)
+        val nextKey = ns.getch()
+        mainLoop(nextKey, appState, ncState)
+    }
+
+    resizeLoop()
   }
 
   def drawTitle(line: Int, win: Ptr[nsh.Window], colorId: Short, msg: String): Unit = {
@@ -83,7 +93,6 @@ object Main {
     Zone { implicit z =>
       val cmsg = toCString(msg)
       ns.wMove(win, line, (maxX / 2) - (msg.size / 2))
-
       ns.wPrintw(win, cmsg)
     }
     ns.wAttrOff(win, ns.colorPair(colorId))

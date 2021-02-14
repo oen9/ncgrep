@@ -4,48 +4,37 @@ import oen.libs.form
 import oen.libs.formh
 import oen.libs.{ncurses => nc}
 import oen.libs.{ncursesh => nch}
+import oen.ncgrep.InputWindow.State
 import scala.scalanative.unsafe._
 
-class InputWindow(implicit z: Zone) {
-  val win = {
-    val (lines, cols) = getLinesAndCols()
-    nc.newWin(lines, cols, 1, 0)
+class InputWindow(initState: State)(implicit z: Zone) {
+  val (lines, cols) = getLinesAndCols()
+  val win           = nc.newWin(lines, cols, 1, 0)
+  val grepQueryForm = new InputForm(win, 1, 1, cols / 2, initState.grepQuery)
+
+  nc.box(win, 0, 0)
+
+  Zone { implicit z =>
+    nc.wMove(win, 0, 2)
+    val cmsg = toCString("input window")
+    nc.wPrintw(win, cmsg)
   }
 
-  val form1 = {
-    val (lines, cols) = getLinesAndCols()
-    new InputForm(win, 1, 1)
-  }
-  resize()
-
-  def resize(): Unit = {
-    val (lines, cols) = getLinesAndCols()
-    nc.wResize(win, lines, cols)
-    nc.wErease(win)
-    form1.resize(cols / 2)
-    redraw()
-  }
-
-  def redraw(): Unit = {
-    nc.box(win, 0, 0)
-
-    Zone { implicit z =>
-      nc.wMove(win, 0, 2)
-      val cmsg = toCString("input window")
-      nc.wPrintw(win, cmsg)
-    }
-
-    nc.wRefresh(win)
-  }
+  nc.wRefresh(win)
 
   def handleKey(key: Int): Unit =
-    form1.handleKey(key)
+    grepQueryForm.handleKey(key)
 
   def focus(): Unit =
-    form1.focus()
+    grepQueryForm.focus()
+
+  def getState(): State = {
+    val grepQuery = grepQueryForm.getBuff()
+    State(grepQuery)
+  }
 
   def delete(): Unit = {
-    form1.delete()
+    grepQueryForm.delete()
     nc.delWin(win)
   }
 
@@ -55,4 +44,8 @@ class InputWindow(implicit z: Zone) {
     val cols    = stdSize.width
     (lines, cols)
   }
+}
+
+object InputWindow {
+  case class State(grepQuery: String = "")
 }

@@ -6,21 +6,23 @@ import oen.libs.{ncurses => nc}
 import oen.libs.{ncursesh => nch}
 import scala.scalanative.unsafe._
 
-class InputForm(parent: Ptr[nch.Window], y: Int, x: Int)(implicit z: Zone) {
+class InputForm(parent: Ptr[nch.Window], y: Int, x: Int, width: Int, initValue: String)(implicit z: Zone) {
 
-  val myForm = {
-    val field = form.newField(1, 10, y, x, 0, 0)
-    form.setFieldBack(field, nc.A_UNDERLINE)
-    form.fieldOptsOff(field, form.O_STATIC)
+  val field = form.newField(1, width, y, x, 0, 0)
+  form.setFieldBack(field, nc.A_UNDERLINE)
+  form.fieldOptsOff(field, form.O_STATIC)
 
-    val fields = alloc[Ptr[formh.Form]](2)
-    fields(0) = field
-    fields(1) = null
-    form.newForm(fields)
-  }
+  val fields = alloc[Ptr[formh.Form]](2)
+  fields(0) = field
+  fields(1) = null
+
+  val myForm = form.newForm(fields)
   form.setFormSub(myForm, parent)
   form.postForm(myForm)
   form.formDriver(myForm, form.REQ_FIRST_FIELD)
+
+  initValue.trim.foreach(ch => form.formDriver(myForm, ch))
+  form.formDriver(myForm, form.REQ_VALIDATION)
 
   def handleKey(key: Int): Unit = {
     key match {
@@ -39,34 +41,7 @@ class InputForm(parent: Ptr[nch.Window], y: Int, x: Int)(implicit z: Zone) {
     nc.wRefresh(parent)
   }
 
-  def resize(newWidth: Int): Unit = {
-    val currField = form.currentField(myForm)
-    val buff      = fromCString(form.fieldBuffer(currField, 0))
-
-    form.unpostForm(myForm)
-    resizeField(newWidth)
-    form.postForm(myForm)
-
-    buff.trim.foreach(ch => form.formDriver(myForm, ch))
-    form.formDriver(myForm, form.REQ_VALIDATION)
-  }
-
-  def resizeField(newWidth: Int): Ptr[formh.Field] = {
-    val currField = form.currentField(myForm)
-    form.freeField(currField) // TODO we need to free the memory
-
-    val newField = form.newField(1, newWidth, y, x, 0, 0)
-    form.setFieldBack(newField, nc.A_UNDERLINE)
-    form.fieldOptsOff(newField, form.O_STATIC)
-
-    val newFields = alloc[Ptr[formh.Form]](2)
-    newFields(0) = newField
-    newFields(1) = null
-
-    form.setFormFields(myForm, newFields)
-
-    newField
-  }
+  def getBuff(): String = fromCString(form.fieldBuffer(field, 0)).trim()
 
   def focus(): Unit = {
     form.formDriver(myForm, form.REQ_VALIDATION)
@@ -74,9 +49,8 @@ class InputForm(parent: Ptr[nch.Window], y: Int, x: Int)(implicit z: Zone) {
   }
 
   def delete(): Unit = {
-    val currField = form.currentField(myForm)
     form.unpostForm(myForm)
     form.freeForm(myForm)
-    form.freeField(currField)
+    form.freeField(field)
   }
 }
