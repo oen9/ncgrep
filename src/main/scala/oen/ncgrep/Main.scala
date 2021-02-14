@@ -78,6 +78,7 @@ object Main {
       case c if c == ns.KEY_F(9) || c == ns.KEY_RESIZE => appState.copy(lastKey = c)
       case other =>
         val nextInputState = ncState.inputWin.handleKey(other, appState.inputState)
+        ncState.resultWin.drawResult(nextInputState.grepQuery)
         val nextKey        = ns.getch()
         val nextAppState   = appState.copy(lastKey = nextKey, inputState = nextInputState)
         mainLoop(nextAppState, ncState)
