@@ -66,6 +66,9 @@ object form {
   @name("post_form")
   def postForm(form: Ptr[Form]): CInt = extern
 
+  @name("set_field_fore")
+  def setFieldFore(field: Ptr[Field], attr: UInt): CInt = extern
+
   @name("set_field_back")
   def setFieldBack(field: Ptr[Field], attr: UInt): CInt = extern
 

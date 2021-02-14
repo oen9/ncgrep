@@ -13,12 +13,12 @@ import scalanative.unsigned._
 
 object Main {
 
-  case class Colors(title: Short)
+  case class Colors(title: Short, form: Short)
   case class NcState(inputWin: InputWindow, resultWin: ResultWindow, colors: Colors)
   case class AppState(inputState: InputWindow.State = InputWindow.State())
 
   def main(args: Array[String]): Unit = {
-    val colors = Colors(title = 1.toShort)
+    val colors = Colors(title = 1.toShort, form = 2.toShort)
     val win    = init(colors)
 
     mainLoops(colors)
@@ -35,6 +35,7 @@ object Main {
     ns.refresh()
 
     ns.initPair(colors.title, nsh.Color.Black, nsh.Color.White)
+    ns.initPair(colors.form, nsh.Color.Black, nsh.Color.White)
 
     win
   }
@@ -55,7 +56,7 @@ object Main {
       case _ =>
         val (nextKey, nextAppState) = Zone { implicit z =>
           redrawMain(ns.stdscr, colors)
-          val inputWin  = new InputWindow(appState.inputState)
+          val inputWin  = new InputWindow(appState.inputState, colors)
           val resultWin = new ResultWindow()
           inputWin.focus()
 
