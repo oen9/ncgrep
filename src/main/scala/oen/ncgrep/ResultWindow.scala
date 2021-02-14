@@ -13,22 +13,15 @@ class ResultWindow {
   drawBox()
   nc.wRefresh(win)
 
-  def drawResult(s: String): Unit = {
+  def drawResult(results: List[String]): Unit = {
     nc.wErease(win)
     drawBox()
-    s match {
-      case s if s.length() >= 3 =>
-        Zone { implicit z =>
-          nc.wMove(win, 1, 1)
-          val cmsg = toCString(s"here will be grep result for: $s")
-          nc.wPrintw(win, cmsg)
-        }
-      case s =>
-        Zone { implicit z =>
-          nc.wMove(win, 1, 1)
-          val cmsg = toCString(s"'$s' is too short (we need at least 3 characters")
-          nc.wPrintw(win, cmsg)
-        }
+    for ((line, idx) <- results.zipWithIndex) {
+      Zone { implicit z =>
+        nc.wMove(win, 1 + idx, 1)
+        val cmsg = toCString(line)
+        nc.wPrintw(win, cmsg)
+      }
     }
     nc.wRefresh(win)
   }

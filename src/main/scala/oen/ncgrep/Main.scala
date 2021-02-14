@@ -77,10 +77,12 @@ object Main {
     def mainLoop(appState: AppState, ncState: NcState): AppState = appState.lastKey match {
       case c if c == ns.KEY_F(9) || c == ns.KEY_RESIZE => appState.copy(lastKey = c)
       case other =>
-        val nextInputState = ncState.inputWin.handleKey(other, appState.inputState)
-        ncState.resultWin.drawResult(nextInputState.grepQuery)
-        val nextKey        = ns.getch()
-        val nextAppState   = appState.copy(lastKey = nextKey, inputState = nextInputState)
+        val niState    = ncState.inputWin.handleKey(other, appState.inputState)
+        val grepResult = GrepExecutor.execute(niState.grepQuery, niState.grepParams, niState.findParams)
+        ncState.resultWin.drawResult(grepResult)
+        ncState.inputWin.focus(niState)
+        val nextKey      = ns.getch()
+        val nextAppState = appState.copy(lastKey = nextKey, inputState = niState)
         mainLoop(nextAppState, ncState)
     }
 

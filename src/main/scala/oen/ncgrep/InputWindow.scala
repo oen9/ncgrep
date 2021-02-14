@@ -85,5 +85,5 @@ class InputWindow(initState: State, colors: Colors)(implicit z: Zone) {
 }
 
 object InputWindow {
-  case class State(grepQuery: String = "", grepParams: String = "-iHne", findParams: String = "", formId: Int = 0)
+  case class State(grepQuery: String = "", grepParams: String = "* -d skip -iIHne", findParams: String = "", formId: Int = 0)
 }
