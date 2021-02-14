@@ -1,0 +1,2 @@
+#!/bin/bash
+sudo cp target/scala-2.13/ncgrep-out /usr/local/bin/ncgrep

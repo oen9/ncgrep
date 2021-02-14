@@ -13,7 +13,7 @@ class InputWindow(initState: State, colors: Colors)(implicit z: Zone) {
   val win            = nc.newWin(lines, cols, 1, 0)
   val grepQueryForm  = new InputForm(win, 2, 1, cols - 2, initState.grepQuery, colors)
   val grepParamsForm = new InputForm(win, 4, 1, cols / 2 - 2, initState.grepQuery, colors)
-  val findParamsForm  = new InputForm(win, 4, cols / 2, cols / 2, initState.grepQuery, colors)
+  val findParamsForm = new InputForm(win, 4, cols / 2, cols / 2, initState.grepQuery, colors)
 
   grepQueryForm.initStyle()
   grepParamsForm.initStyle()
